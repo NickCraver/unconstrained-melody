@@ -7,6 +7,7 @@
 *.suo
 *.user
 *.sln.cache
+*.vs
 
 # IDE add-ins
 *.dotCover
@@ -28,6 +29,7 @@ Minibench Release.snk
 **/bin/
 **/obj/
 **/Rewritten/
+**/Published/
 
 # Generated web site
 /www/_site/**
@@ -37,4 +39,3 @@ Minibench Release.snk
 
 # Roslyn temporary files
 /src/*.sln.ide/**
-

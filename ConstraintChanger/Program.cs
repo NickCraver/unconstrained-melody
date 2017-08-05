@@ -19,42 +19,37 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace ConstraintChanger
 {
-    class Program
+    internal static class Program
     {
-        const string InputAssembly = "UnconstrainedMelody.dll";
-        const string OutputAssembly = InputAssembly;
-        const string OutputDirectory = @"../../../Rewritten";
+        private const string InputAssembly = "UnconstrainedMelody.Original.dll";
+        private const string OutputAssembly = "UnconstrainedMelody.dll";
 
-        private static readonly string[] SdkPaths = 
+        private static int Main()
         {
-            @"Microsoft SDKs\Windows\v6.0A\bin",
-            @"Microsoft SDKs\Windows\v7\bin",
-            @"Microsoft SDKs\Windows\v7.0A\bin",
-            @"Microsoft SDKs\Windows\v8.0\bin",
-            @"Microsoft SDKs\Windows\v8.0A\bin",
-            @"Microsoft SDKs\Windows\v8.1\bin",
-            @"Microsoft SDKs\Windows\v8.1A\bin",
-        };
+            var basePath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            Console.WriteLine("Transforming UnconstrainedMelody...");
 
-        static int Main()
-        {
-            string ildasmExe = FindIldasm();
-            if (ildasmExe == null)
+            var ildasmExe = Path.Combine(basePath, "ildasm.exe");
+            var ilasmExe = Path.Combine(basePath, "ilasm.exe");
+
+            if (!File.Exists(ildasmExe))
             {
-                // Error message will already have been written
-                return 1;                 
-            }
-            string windows = Environment.GetFolderPath(Environment.SpecialFolder.System);
-            string framework2Directory = Path.Combine(windows, @"..\Microsoft.NET\Framework\v2.0.50727");
-            string ilasmExe = Path.Combine(framework2Directory, "ilasm.exe");
-            if (!File.Exists(ilasmExe))
-            {
-                Console.WriteLine("Can't find ilasm. Aborting. Expected it at: {0}", ilasmExe);
+                Console.WriteLine("  ERROR: Can't find ildasm.exe at {0}", ildasmExe);
                 return 1;
             }
+            if (!File.Exists(ilasmExe))
+            {
+                Console.WriteLine("  ERROR: Can't find ilasm.exe at {0}", ilasmExe);
+                return 1;
+            }
+
+            Console.WriteLine("Using: ");
+            Console.WriteLine("  ildasm.exe: " + ildasmExe);
+            Console.WriteLine("  ilasm.exe: " + ilasmExe);
 
             try
             {
@@ -70,29 +65,6 @@ namespace ConstraintChanger
             return 0;
         }
 
-        private static string FindIldasm()
-        {
-            string[] programFiles = new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                                            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) };
-            foreach (string root in programFiles)
-            {
-                foreach (string sdkPath in SdkPaths)
-                {
-                    string directory = Path.Combine(root, sdkPath);
-                    if (Directory.Exists(directory))
-                    {
-                        string ildasm = Path.Combine(directory, "ildasm.exe");
-                        if (File.Exists(ildasm))
-                        {
-                            return ildasm;
-                        }
-                    }
-                }
-            }
-            Console.WriteLine("Unable to find SDK directory containing ildasm.exe. Aborting.");
-            return null;
-        }
-
         private static string Decompile(string ildasmExe)
         {
             string ilFile = Path.GetTempFileName();
@@ -100,8 +72,7 @@ namespace ConstraintChanger
             Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = ildasmExe,
-                Arguments = "\"/OUT=" + ilFile + "\" " + InputAssembly,
-                WindowStyle = ProcessWindowStyle.Hidden
+                Arguments = "\"/OUT=" + ilFile + "\" " + InputAssembly
             });
             process.WaitForExit();
             if (process.ExitCode != 0)
@@ -113,21 +84,14 @@ namespace ConstraintChanger
 
         private static void Recompile(string ilFile, string ilasmExe)
         {
-            if (!Directory.Exists(OutputDirectory))
-            {
-                Console.WriteLine("Creating output directory");
-                Directory.CreateDirectory(OutputDirectory);
-            }
-
             string resFile = Path.ChangeExtension(ilFile, ".res");
 
-            string output = Path.Combine(OutputDirectory, OutputAssembly);
+            string output = Path.Combine(Directory.GetCurrentDirectory(), OutputAssembly);
             Console.WriteLine("Recompiling {0} to {1}", ilFile, output);
             Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = ilasmExe,
-                Arguments = "/OUTPUT=" + output + " /DLL " + "\"" + ilFile + "\" /RESOURCE=\"" + resFile + "\"",
-                WindowStyle = ProcessWindowStyle.Hidden
+                Arguments = "/OUTPUT=" + output + " /DLL " + "\"" + ilFile + "\" /RESOURCE=\"" + resFile + "\""
             });
             process.WaitForExit();
         }

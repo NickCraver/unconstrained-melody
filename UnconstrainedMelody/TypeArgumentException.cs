@@ -16,7 +16,9 @@
 #endregion
 
 using System;
+#if NETSTANDARD2_0
 using System.Runtime.Serialization;
+#endif
 
 namespace UnconstrainedMelody
 {
@@ -52,6 +54,8 @@ namespace UnconstrainedMelody
         {
         }
 
+#if NETSTANDARD2_0
+
         /// <summary>
         /// Constructor provided for serialization purposes.
         /// </summary>
@@ -60,5 +64,6 @@ namespace UnconstrainedMelody
         protected TypeArgumentException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }
